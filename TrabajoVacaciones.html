@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>DocumentoEntregable</title>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.1/themes/smoothness/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src='https://code.jquery.com/ui/1.12.1/jquery-ui.js'></script>
+</head>
+
+<body>
+    <table style="border: 1px solid">
+        <thead>
+            <tr style="text-align: left">
+                <th>ID</th>
+                <th>NOMBRE</th>
+                <th>SALARIO</th>
+                <th>EDAD</th>
+                <th>PERFIL</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+
+        <tbody>
+        </tbody>
+
+        <tfoot>
+            <tr>
+                <td><input id="id"></td>
+                <td><input id="nombre"></td>
+                <td><input id="salario"></td>
+                <td><input id="edad"></td>
+                <td><input id="perfil"></td>
+                <td></td>
+                <td><button onclick="createStudent()">ADD</button></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div id="popUp" title="Edit Student" style="display:none;">
+        <label for="id2">ID:</label>
+        <input type="text" name="id2" disabled><br>
+        <label for="nombre2">Nombre:</label>
+        <input type="text" name="nombre2"><br>
+        <label for="salario2">Salario:</label>
+        <input type="text" name="salario2"><br>
+        <label for="edad2">Edad:</label>
+        <input type="text" name="edad2"><br>
+        <label for="perfil2">Perfil:</label>
+        <input type="text" name="perfil2"><br>
+        <button onclick="updateStudent()">Save</button>
+    </div>
+
+    <script>
+        const url = "https://dummy.restapiexample.com/api/v1";
+
+        window.onload = () => {
+            $("#popUp").hide(); // Corregido a 'popUp'
+            readStudents();
+        }
+
+        function readStudents() {
+            get().then(response => {
+                var tbody = document.getElementsByTagName("tbody")[0];
+                tbody.innerHTML = "";
+                response.forEach(e => {
+                    var row = tbody.insertRow();
+                    var cell = row.insertCell();
+                    cell.innerHTML = e.id;
+                    cell = row.insertCell();
+                    cell.innerHTML = e.employee_name;
+                    cell = row.insertCell();
+                    cell.innerHTML = e.employee_salary;
+                    cell = row.insertCell();
+                    cell.innerHTML = e.employee_age;
+                    cell = row.insertCell();
+                    cell.innerHTML = e.profile_image;
+
+                    var student = JSON.stringify({
+                        "id": e.id,
+                        "nombre": e.employee_name,
+                        "salario": e.employee_salary,
+                        "edad": e.employee_age,
+                        "perfil": e.profile_image,
+                    });
+
+                    cell = row.insertCell();
+                    cell.innerHTML = `<button onclick='viewStudent(${student})'>VIEW</button>`;
+                    cell = row.insertCell();
+                    cell.innerHTML = `<button onclick='deleteStudent(${e.id})'>DELETE</button>`;
+                });
+
+                document.getElementById("id").value = "";
+                document.getElementById('nombre').value = '';
+                document.getElementById('salario').value = '';
+                document.getElementById('edad').value = '';
+                document.getElementById('perfil').focus();
+            }).catch(error => {
+                console.log(error);
+            });
+        }
+
+        function createStudent() {
+            add().then(() => {
+                readStudents();
+            }).catch(error => {
+                console.log(error);
+            });
+        }
+
+        function viewStudent(student) {
+            document.getElementsByName('id2')[0].value = student.id;
+            document.getElementsByName('nombre2')[0].value = student.nombre;
+            document.getElementsByName('salario2')[0].value = student.salario;
+            document.getElementsByName('edad2')[0].value = student.edad;
+            document.getElementsByName('perfil2')[0].value = student.perfil;
+            $('#popUp').dialog({
+                closeText: ''
+            }).css('font-size', '13px');
+        }
+
+        function deleteStudent(id) {
+            remove(id).then(() => {
+                readStudents();
+            }).catch(error => {
+                console.log(error);
+            });
+        }
+
+        function updateStudent() {
+            update().then(() => {
+                $('#popUp').dialog('close');
+                readStudents();
+            }).catch(error => {
+                console.log(error);
+            });
+        }
+
+        // PROMESAS
+        function get() {
+            return new Promise(function (resolve, reject) {
+                var request = new XMLHttpRequest();
+                request.open("GET", url + "/employees");
+                request.responseType = "json";
+
+                request.onload = function () {
+                    if (request.status == 200) {
+                        resolve(request.response.data);
+                    } else {
+                        reject(Error("Data couldn't be loaded. Error: " + request.statusText));
+                    }
+                };
+                request.onerror = function () {
+                    reject(Error("Oops!, there was a network error."));
+                };
+                request.send();
+            });
+        }
+
+        function add() {
+            return new Promise(function (resolve, reject) {
+                var request = new XMLHttpRequest();
+                request.open("POST", url + "/create");
+                request.setRequestHeader('Content-Type', 'application/json');
+
+                var student = JSON.stringify({
+                    "nombre": document.getElementById("nombre").value,
+                    "salario": document.getElementById("salario").value,
+                    "edad": document.getElementById("edad").value,
+                    "perfil": document.getElementById("perfil").value,
+                });
+
+                request.onload = function () {
+                    if (request.status == 201) {
+                        resolve(request.response);
+                    } else {
+                        reject(Error("Student couldn't be added. Error: " + request.statusText));
+                    }
+                };
+                request.onerror = function () {
+                    reject(Error("Oops!, there was a network error."));
+                };
+                request.send(student);
+            });
+        }
+
+        function remove(id) {
+            return new Promise(function (resolve, reject) {
+                var request = new XMLHttpRequest();
+                request.open("DELETE", url + "/delete/" + id);
+                request.setRequestHeader('Content-Type', 'application/json');
+
+                request.onload = function () {
+                    if (request.status == 200) {
+                        resolve(request.response);
+                    } else {
+                        reject(Error("Student couldn't be deleted. Error: " + request.statusText));
+                    }
+                };
+                request.onerror = function () {
+                    reject(Error("Oops!, there was a network error."));
+                };
+                request.send();
+            });
+        }
+
+        function update() {
+            return new Promise((resolve, reject) => {
+                var request = new XMLHttpRequest();
+                request.open('PUT', url + '/update/' + document.getElementsByName('id2')[0].value);
+                request.setRequestHeader('Content-Type', 'application/json');
+                var student = JSON.stringify({
+                    'nombre': document.getElementsByName('nombre2')[0].value,
+                    'salario': document.getElementsByName('salario2')[0].value,
+                    'edad': document.getElementsByName('edad2')[0].value,
+                    'perfil': document.getElementsByName('perfil2')[0].value,
+                });
+
+                request.onload = () => {
+                    if (request.status == 200) {
+                        resolve(request.response);
+                    } else {
+                        reject(request.statusText);
+                    }
+                };
+                request.onerror = () => {
+                    reject(request.responseText);
+                };
+                request.send(student);
+            });
+        }
+    </script>
+</body>
+
+</html>
